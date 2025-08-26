@@ -32,7 +32,7 @@ class SVFileCompressor:
         return data
     
     def get_column_frequencies(self):
-        freq_table = {header: {} for header in self.get_headers()}
+        freq_table = {header: {} for header in self.get_sv_headers()}
         
         for header, column in self.data.items():
             for row in column:
@@ -62,12 +62,11 @@ class SVFileCompressor:
         for header in freq_table.keys():
             huffman_trees[header] = build_huffman_tree(freq_table[header])
             code_tables[header] = generate_huffman_codes(huffman_trees[header])
-            
-        logger.info(f"Writing out to {self.output_file}")
-        
-        logger.info(f"Generating svc header")
+                
+        logger.info("Generating svc header")
         header = create_header(self.file_size, self.delimiter, headers, huffman_trees)
         
+        logger.info("Getting binary sequence")
         binary = ""
         with open(self.filename, "r", encoding="utf-8") as fp:
             next(fp) # skip headers
@@ -78,12 +77,7 @@ class SVFileCompressor:
                     for char in column:
                         binary_string = code_tables[current_column][char]
                         binary += binary_string
-                        
-        logger.info(f"Getting binary sequence")
-            
-        
-        
-                        
 
-            
+        logger.info(f"Writing out to {self.output_file}")
         
+     
