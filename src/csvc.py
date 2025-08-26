@@ -10,7 +10,9 @@ def main(args):
         logger.info(f"Using delimiter '{args.delimiter}'")
     
     if args.compress:
-        compressor = SVFileCompressor(args.compress, args.delimiter)
+        if not args.output_file:
+            args.output_file = args.compress + ".svc"
+        compressor = SVFileCompressor(args.compress, args.delimiter, args.output_file)
         compressor.compress()
     else:
         decompress(args.decompress, logger)
@@ -23,12 +25,21 @@ def single_char(s):
 
 if __name__ == "__main__":
     
+    
     # Handle args
     parser = argparse.ArgumentParser(description="File compressor for seperated values files")
 
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     parser.add_argument("--delimiter", type=single_char, default=",", help="Delimiter for seperated value file [default: '%(default)s']")
+    
+    parser.add_argument(
+        "-o", 
+        "--output-file",
+        required=False,
+        metavar="<filename>", 
+        help="Output to a file [default: '%(default)s']"
+    )
     
     group = parser.add_mutually_exclusive_group(required=True)
 

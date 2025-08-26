@@ -1,13 +1,19 @@
 import csv
 import logging
+import os
+
+from huffman import build_huffman_tree, generate_huffman_codes
+from header import create_header
 
 logger = logging.getLogger("csvc")
 
 
 class SVFileCompressor:
-    def __init__(self, filename, delimiter):
+    def __init__(self, filename, delimiter, output_file):
         self.filename = filename
         self.delimiter = delimiter
+        self.output_file = output_file
+        self.file_size = os.path.getsize(self.filename)
         self.data = self.read_sv_file()
         
     def read_sv_file(self):
@@ -37,20 +43,47 @@ class SVFileCompressor:
                         freq_table[header][char] = 1
         return freq_table       
         
-    def get_headers(self):
-        return self.data.keys()
+    def get_sv_headers(self):
+        return list(self.data.keys())
         
     def compress(self):
         logger.info(f"Starting compression for '{self.filename}'")
-
-        headers = self.get_headers()
-        logger.debug(f"Headers: {headers}")
+        
+        logger.info(f"Getting SV file headers")
+        headers = self.get_sv_headers()
         
         logger.info(f"Calculating column frequencies")
         freq_table = self.get_column_frequencies()
         
+        logger.info(f"Creating Huffman Trees and Codes")
+        huffman_trees = {header: {} for header in headers}
+        code_tables = {header: {} for header in headers}
+        
+        for header in freq_table.keys():
+            huffman_trees[header] = build_huffman_tree(freq_table[header])
+            code_tables[header] = generate_huffman_codes(huffman_trees[header])
+            
+        logger.info(f"Writing out to {self.output_file}")
+        
+        logger.info(f"Generating svc header")
+        header = create_header(self.file_size, self.delimiter, headers, huffman_trees)
+        
+        binary = ""
+        with open(self.filename, "r", encoding="utf-8") as fp:
+            next(fp) # skip headers
+            for line in fp:
+                columns = line.strip().split(self.delimiter)
+                for column_index, column in enumerate(columns):
+                    current_column = headers[column_index]
+                    for char in column:
+                        binary_string = code_tables[current_column][char]
+                        binary += binary_string
+                        
+        logger.info(f"Getting binary sequence")
+            
         
         
-        
-        
+                        
+
+            
         
