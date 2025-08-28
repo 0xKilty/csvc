@@ -4,22 +4,15 @@ from collections import deque
 
 logger = logging.getLogger("csvc")
 
-class BitStream:
-    def __init__(self, bit_string=""):
-        self.bit_string = bit_string
-        self.length = len(bit_string)
-        self.value = int(bit_string, 2) if bit_string else None
-
-        num_bytes = (self.length + 7) // 8
-        self.data = self.value.to_bytes(num_bytes, byteorder="big") if bit_string else None
-
-    def __add__(self, other):
-        if isinstance(other, BitStream):
-            return BitStream(self.bit_string + other.bit_string)
-        raise TypeError(f"Unsupported operand type(s) for +: 'BitStream' and '{type(other).__name__}'")
-    
-    def __str__(self):
-        return self.data.hex()
+class BitStreamReader:
+    def __init__(self, fp, in_byte_offset):
+        self.fp = fp
+        self.in_byte_offset = in_byte_offset
+        
+    def read_bits(self):
+        while byte := self.fp.read(1): 
+            for bit in format(byte[0], "08b"):
+                yield bit
 
 class Header:
     def __init__(self, file_size, delimiter, headers, huffman_trees):
@@ -72,14 +65,18 @@ class Header:
         logger.debug("Unpacking headers")
         headers = unpack_string_list(fp)
         logger.debug(f"Headers {headers}")
+        
+        number_of_columns = len(headers)
 
         # Read Huffman keys
+        logger.debug("Unpacking Huffman keys")
         key_strings = unpack_string_list(fp)
         all_keys = [list(s) for s in key_strings]
-        print(all_keys)
+        logger.debug(f"Huffman keys {all_keys}")
 
         # Rebuild huffman_trees
-        # huffman_trees = unpack_huffman_trees(fp, all_keys)
+        huffman_trees = unpack_huffman_tree(fp, all_keys)
+        
         return None
         # return Header(file_size, delimiter, headers, huffman_trees)
 
@@ -103,6 +100,12 @@ def unpack_string(fp):
         byte = fp.read(1)
     return string
 
+def pack_string_list(string_list):
+    packed_string_list = ""
+    for string in string_list:
+        packed_string_list += pack_string(string)
+    return packed_string_list + bytes_to_binary_string(b"\x00")
+
 def unpack_string_list(fp):
     string_list = []
     while True:
@@ -111,13 +114,6 @@ def unpack_string_list(fp):
             break
         string_list.append(string)
     return string_list
-
-def pack_string_list(string_list):
-    packed_string_list = ""
-    for string in string_list:
-        packed_string_list += pack_string(string)
-    return packed_string_list + bytes_to_binary_string(b"\x00")
-
 
 def pack_huffman_tree(root_node):
     if not root_node:
@@ -142,6 +138,16 @@ def pack_huffman_tree(root_node):
 
     return keys, tree_binary_string
 
+def unpack_huffman_tree(fp, all_keys):
+    bit_stream_reader = BitStreamReader(fp, 0)
+    
+    idx = 0
+    for bit in bit_stream_reader.read_bits():
+        if idx == 100:
+            break
+        print(bit)
+        idx += 1
+
 
 def pack_huffman_trees(huffman_trees):
     huffman_binary_string = ""
@@ -151,11 +157,4 @@ def pack_huffman_trees(huffman_trees):
         huffman_binary_string += bit_string
         all_keys.append(keys)
     return all_keys, huffman_binary_string
-        
-
-def bytes_to_bits(bytes):
-    return "".join(format(byte, "08b") for byte in bytes)
-    
-def read_header():
-    pass
         
