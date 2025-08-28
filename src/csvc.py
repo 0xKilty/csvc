@@ -3,7 +3,7 @@ import codecs
 import logging
 import coloredlogs
 from compress import SVFileCompressor
-from decompress import decompress
+from decompress import SVFileDecompressor
 
 def main(args):    
     if args.delimiter != ",":
@@ -15,7 +15,8 @@ def main(args):
         compressor = SVFileCompressor(args.compress, args.delimiter, args.output_file)
         compressor.compress()
     else:
-        decompress(args.decompress, logger)
+        decompressor = SVFileDecompressor(args.decompress)
+        decompressor.decompress()
 
 def single_char(s):
     s = codecs.decode(s, "unicode_escape")

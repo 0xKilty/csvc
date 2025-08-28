@@ -3,10 +3,9 @@ import logging
 import os
 
 from huffman import build_huffman_tree, generate_huffman_codes
-from header import create_header
+from header import BitStream, Header, bits_to_hex
 
 logger = logging.getLogger("csvc")
-
 
 class SVFileCompressor:
     def __init__(self, filename, delimiter, output_file):
@@ -64,10 +63,14 @@ class SVFileCompressor:
             code_tables[header] = generate_huffman_codes(huffman_trees[header])
                 
         logger.info("Generating svc header")
-        header = create_header(self.file_size, self.delimiter, headers, huffman_trees)
+
+        header = Header(self.file_size, self.delimiter, headers, huffman_trees)
         
+        binary = header.create_header()
+        
+        print(bits_to_hex(binary[:8 * 4]))
+                
         logger.info("Getting binary sequence")
-        binary = ""
         with open(self.filename, "r", encoding="utf-8") as fp:
             next(fp) # skip headers
             for line in fp:
@@ -80,4 +83,16 @@ class SVFileCompressor:
 
         logger.info(f"Writing out to {self.output_file}")
         
+        write_out_binary_string(binary, self.output_file)
      
+     
+def write_out_binary_string(bin_str, output_file):
+    bin_str += '0' * (8 - (len(bin_str) % 8))
+    
+    with open(output_file, "wb") as fp:
+        for i in range(0, len(bin_str), 8):
+            byte_str = bin_str[i:i+8]
+            val = int(byte_str, 2)
+            byte = val.to_bytes(1, "big")
+            fp.write(byte)
+
